@@ -1,0 +1,15 @@
+template/
+database/
+config*
+.DS_store
+
+# old src
+src/sendMail.py
+src/sendPay.py
+src/read_csv.c
+
+# binary
+a.out
+
+# python
+*__pycache__/
