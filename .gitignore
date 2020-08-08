@@ -1,6 +1,7 @@
 template/
 database/
 config*
+main.py
 .DS_store
 
 # old src
