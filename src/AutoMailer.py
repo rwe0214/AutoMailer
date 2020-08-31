@@ -20,6 +20,9 @@ class AutoMailer():
     def __del__(self):
         self.server.quit()
 
+    def __format_name(self, name):
+        return formataddr((Header(name, 'utf-8').encode(), '')).split('<')[0]
+
     def __readConf(self):
         conf = {}
         with open(self.conf_path) as fp:
@@ -29,6 +32,7 @@ class AutoMailer():
             conf[key] = val
         self.header = conf['header']
         self.host = conf['host']
+        self.hostname = conf['hostname']
         self.pwd = conf['pwd']
         self.test_addr = conf['test_addr']
         self.smtp_server = conf['smtp_server']
@@ -44,6 +48,9 @@ class AutoMailer():
         self.server.login(self.host, self.pwd)
 
     def __readSendData(self):
+        '''
+            Read the google form's data.
+        '''
         self.mail_data = pd.read_csv(self.database, dtype=str)
         self.mail_data = self.mail_data.fillna('')
         if self.map_path is not None:
@@ -56,10 +63,13 @@ class AutoMailer():
             self.mail_data = self.mail_data.rename(columns=map_info)
 
     def __getFormat(self, val):
+        '''
+            Read the reply mail format
+            TODO:
+                - [] Calculate the fee, or do it on the registry google form
+        '''
         with open(self.format_path) as fp:
             keys = fp.read().split(',')
-        #for k in keys:
-        #    self.format_info.append(val[k])
         for i in range(len(keys)-3):
             self.format_info.append(val[keys[i]])
         self.format_info.append('$')
@@ -67,15 +77,20 @@ class AutoMailer():
         self.format_info.append('$')
 
     def __setMailBody(self, val):
+        '''
+			Set the email body in html format.
+
+			Attribute:
+				val: A datafram's row, which need to contain 'to_name' and 'to_addr' two columns
+        '''
         with open(self.template) as fp:
             contents = fp.read()
         self.format_info = []
         self.__getFormat(val)
         self.mail_body = contents.format(*self.format_info)
         self.mail_body = MIMEText(self.mail_body, 'html', 'utf-8')
-        self.mail_body['From'] = u'EDA Workshop 2019 <%s>' % self.host
-        self.mail_body['To'] = u'%s <%s>' % (val['to_name'], self.test_addr)
-        #self.mail_body['To'] = u'%s <%s>' % (val['to_name'], val['to_addr'])
+        self.mail_body['From'] = f'{self.hostname} <{self.host}>'
+        self.mail_body['To'] = self.__format_name(val['to_name'])+ f' <{val["to_addr"]}>'
         self.mail_body['Subject'] = Header(self.header, 'utf-8').encode()
 
     def __sendMail(self):
@@ -84,7 +99,7 @@ class AutoMailer():
             self.__setMailBody(row)
             try:
                 self.__printLog('To ' + row['to_name'] + ': ' + row['to_addr'])
-                self.server.sendmail(self.host, [self.test_addr], self.mail_body.as_string())
+                self.server.sendmail(self.host, self.test_addr, self.mail_body.as_string())
                 self.__printLog('\tsent!')
             except smtplib.SMTPException:
                 self.__printLog('\tsent fail!')
@@ -102,10 +117,10 @@ class AutoMailer():
 def main():
     print('[LOG] Debugging mode')
     CONFIG = '../config.txt'
-    DATABASE = '../database/2019 EDA Workshop 報名表單 (回應) - 表單回應 1.csv'
-    MAP_INFO = '../template/mapping.txt'
-    TEMPLETE = '../template/edaw2019_student.html'
-    FORMAT_INFO = '../template/student_mail.fmt'
+    DATABASE = '../database/test_data.csv'
+    MAP_INFO = '../template/test_mapping.txt'
+    TEMPLETE = '../template/test_templete.html'
+    FORMAT_INFO = '../template/test_format.fmt'
 
     mailer = AutoMailer(CONFIG, DATABASE, TEMPLETE, FORMAT_INFO, MAP_INFO)
     mailer.work()
