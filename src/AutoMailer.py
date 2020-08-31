@@ -78,10 +78,10 @@ class AutoMailer():
 
     def __setMailBody(self, val):
         '''
-			Set the email body in html format.
+            Set the email body in html format.
 
-			Attribute:
-				val: A datafram's row, which need to contain 'to_name' and 'to_addr' two columns
+            Attribute:
+                val: A datafram's row, which need to contain 'to_name' and 'to_addr' two columns
         '''
         with open(self.template) as fp:
             contents = fp.read()
